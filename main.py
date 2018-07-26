@@ -3,6 +3,8 @@ import requests
 from bs4 import BeautifulSoup, NavigableString
 from urllib.parse import urljoin
 
+BLOCK_HEADERS = ['h3', 'h4']
+
 
 def remove_edit_href(node):
     edit_span = node.find('span', {'class': 'mw-editsection'})
@@ -11,7 +13,22 @@ def remove_edit_href(node):
 
 
 def get_all_blocks(node):
-    pass
+    if node is None:
+        return
+    node = node.find_next(BLOCK_HEADERS)
+    remove_edit_href(node)
+    head, body = node.text, ""
+    while node.nextSibling and node.nextSibling.name != 'hr':
+        node = node.nextSibling
+        if isinstance(node, NavigableString):
+            continue
+        if node.name in BLOCK_HEADERS:
+            yield head, body
+            remove_edit_href(node)
+            head, body = node.text, ""
+        else:
+            body += str(node)
+    yield head, body
 
 
 def main():
@@ -27,19 +44,71 @@ def main():
     base = soup.find('div', {'class': "mw-parser-output"})
     w_list = base.find('ol').find_all('li')
 
+    model_fields = [
+        {'name': 'idx'},
+
+        {'name': 'Word'},
+
+        {'name': 'Pronoun'},
+        {'name': 'Preposition'},
+        {'name': 'Conjunction'},
+        {'name': 'Particle'},
+        {'name': 'Verb'},
+        {'name': 'Verb form'},
+        {'name': 'Noun'},
+        {'name': 'Noun 1'},
+        {'name': 'Noun 2'},
+        {'name': 'Adverb'},
+        {'name': 'Adverb 1'},
+        {'name': 'Interjection'},
+        {'name': 'Adjective'},
+        {'name': 'Numeral'},
+
+        {'name': 'Pronunciation'},
+        {'name': 'Declension'},
+        {'name': 'Etymology'},
+        {'name': 'Etymology 1'},
+        {'name': 'Etymology 2'},
+        {'name': 'Etymology 3'},
+        {'name': 'Synonyms'},
+        {'name': 'Antonyms'},
+        {'name': 'Hypernyms'},
+        {'name': 'Hyponyms'},
+        {'name': 'Meronyms'},
+        {'name': 'Anagrams'},
+        {'name': 'Contraction'},
+        {'name': 'References'},
+        {'name': 'Descendants'},
+        {'name': 'Related terms'},
+        {'name': 'See also'},
+        {'name': 'Further reading'},
+        {'name': 'Derived terms'},
+        {'name': 'Usage notes'},
+        {'name': 'Phrases'},
+        {'name': 'Phrase'},
+        {'name': 'Conjugation'},
+        {'name': 'Alternative forms'},
+        {'name': 'Coordinate terms'},
+        {'name': 'External links'},
+
+
+    ]
+
     my_model = genanki.Model(
         1607392320,
         'Wikislovnik',
         css=css,
-        fields=[
-            {'name': 'idx'},
-            {'name': 'Question'},
-            {'name': 'Answer'},
-        ],
+        fields=model_fields,
         templates=[{
             'name': 'Card 1',
-            'qfmt': '{{Question}}',
-            'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
+            'qfmt': '{{Word}}',
+            'afmt': '''
+            {{Word}}
+            <hr id="answer">
+            {{#Pronunciation}}
+                {{Pronunciation}}
+            {{/Pronunciation}}
+            ''',
         }])
 
     my_deck = genanki.Deck(2059400111, 'Czech Frequency Word List')
@@ -52,25 +121,24 @@ def main():
         w_resp = requests.get(w_url)
         w_soup = BeautifulSoup(w_resp.text, "lxml")
 
-        tr = ""
+        fields = [str(idx), word.text]
         cz_begin = w_soup.find('span', id="Czech")
-        for block in get_all_blocks(cz_begin):
-            print(block)
+        data = dict(get_all_blocks(cz_begin))
 
-        # if cz_negin:
-            # rr = rr.parent
-            # while rr.nextSibling and rr.nextSibling.name != 'hr':
-                # rr = rr.nextSibling
-                # if isinstance(rr, NavigableString):
-                    # continue
-                # remove_edit_href(rr)
-                # tr += str(rr)
+
+        for field in model_fields[2:]:
+            field_name = field['name']
+            fields.append(data.pop(field_name, ""))
+
+        # if data.keys():
+            # print("!!!!!!!!!!!!!!!", data.keys())
+        assert not data.keys(), data.keys()
+
         my_note = genanki.Note(
             model=my_model,
-            fields=[word.text, tr, str(idx)], sort_field='idx')
+            fields=fields, sort_field='idx')
         my_deck.add_note(my_note)
-        if idx>10:
-            break
+
 
     genanki.Package(my_deck).write_to_file('/output/czfrq.apkg')
 
