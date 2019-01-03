@@ -8,4 +8,5 @@ RUN pip install genanki
 
 
 COPY main.py /app/main.py
+VOLUME /tmp/.cache/
 CMD ["python", "/app/main.py"]

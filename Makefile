@@ -3,4 +3,4 @@ build:
 run:
 	docker run -it --rm histrio/czfrq:latest
 run-dev:
-	docker run -it --rm -v ${PWD}/main.py:/app/main.py -v ${PWD}/output:/output histrio/czfrq:latest
+	docker run -it --rm -v ${PWD}/main.py:/app/main.py -v ${PWD}/output:/output -v ${PWD}/.cache:/tmp/.cache/ histrio/czfrq:latest
