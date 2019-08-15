@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "czfrq"
+version = "0.1.0"
+description = "Generate anki deck from Czech frequency word list"
+authors = ["Rinat Sabitov <rinat.sabitov@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+beautifulsoup4 = "4.8.0"
+cachecontrol = "0.12.5"
+lockfile = "0.12.2"
+lxml = "4.4.1"
+genanki = { git = "https://github.com/kerrickstaley/genanki.git", branch = "master" }
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

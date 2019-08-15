@@ -1,12 +1,8 @@
-FROM python:3.6
+FROM python:3.7
 
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
+COPY ./pyproject.toml .
 
-RUN apt-get install git && git clone https://github.com/kerrickstaley/genanki.git
-RUN pip install genanki
-
+RUN pip install poetry && poetry install
 
 COPY main.py /app/main.py
-VOLUME /tmp/.cache/
-CMD ["python", "/app/main.py"]
+CMD ["poetry", "run", "python", "/app/main.py"]
