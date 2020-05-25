@@ -11,6 +11,8 @@ cachecontrol = "0.12.5"
 lockfile = "0.12.2"
 lxml = "4.4.1"
 genanki = { git = "https://github.com/kerrickstaley/genanki.git", branch = "master" }
+msgpack = "0.6.2"
+spacy = "^2.2.4"
 
 [tool.poetry.dev-dependencies]
 

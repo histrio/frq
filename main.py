@@ -1,3 +1,4 @@
+import os
 import logging
 import genanki
 import requests
@@ -11,7 +12,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BLOCK_HEADERS = ['h3', 'h4']
-URL = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
+URL = 'https://en.wiktionary.org' \
+      '/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
 STYLE = '''
     .card {
         font-family: helvetica, arial, sans-serif;
@@ -103,7 +105,8 @@ def get_all_blocks(node):
 
 
 def main():
-    forever_cache = FileCache('/tmp/.cache/', forever=True)
+    cache_path = os.path.join(os.path.dirname(__file__), '.cache')
+    forever_cache = FileCache(cache_path, forever=True)
     session = CacheControl(requests.Session(), forever_cache)
 
     resp = session.get(URL)
@@ -130,6 +133,8 @@ def main():
         'Adjective',
         'Numeral',
         'Particle',
+        'Particle',
+        'Participle',
 
         'Pronunciation',
         'Declension',
@@ -188,7 +193,11 @@ def main():
                     %s
                 </div>
                 <div class="bar foot">
-                  <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
+                  <div id="url">
+                    <a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>
+                        Wikislovnik
+                    </a>
+                  </div>
                 </div>
             ''' % '\n'.join(items),
         }])
@@ -217,7 +226,7 @@ def main():
                 fields=fields, sort_field='idx')
             my_deck.add_note(my_note)
 
-    genanki.Package(my_deck).write_to_file('/output/czfrq.apkg')
+    genanki.Package(my_deck).write_to_file('./czfrq.apkg')
 
 
 if __name__ == "__main__":
