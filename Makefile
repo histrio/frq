@@ -8,3 +8,4 @@ run-dev:
 		-v ${PWD}/output:/output \
 		-v ${PWD}/.cache:/tmp/.cache/ \
 		histrio/czfrq:latest
+		# --user `id -u`:`id -g` \

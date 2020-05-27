@@ -133,7 +133,6 @@ def main():
         'Adjective',
         'Numeral',
         'Particle',
-        'Particle',
         'Participle',
 
         'Pronunciation',
