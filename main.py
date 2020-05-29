@@ -109,10 +109,10 @@ def main():
     forever_cache = FileCache(cache_path, forever=True)
     session = CacheControl(requests.Session(), forever_cache)
 
-    resp = session.get(URL)
-    soup = BeautifulSoup(resp.text, "lxml")
-    base = soup.find('div', {'class': "mw-parser-output"})
-    w_list = base.find('ol').find_all('li')
+    # resp = session.get(URL)
+    # soup = BeautifulSoup(resp.text, "lxml")
+    # base = soup.find('div', {'class': "mw-parser-output"})
+    # w_list = base.find('ol').find_all('li')
 
     model_fields = [
         'idx',
@@ -135,6 +135,7 @@ def main():
         'Particle',
         'Participle',
 
+        'Letter',
         'Pronunciation',
         'Declension',
         'Etymology',
@@ -203,27 +204,29 @@ def main():
 
     my_deck = genanki.Deck(2059400111, 'Czech Frequency Word List')
 
-    for idx, w in enumerate(w_list):
-        word = w.find('a')
-        logger.info(f"{idx:0>4} {word.text}")
-        w_url = urljoin(URL, word['href'])
+    with open('data/result01.txt', 'r') as w_list:
+        for idx, word in enumerate(w_list):
+            word = word.strip()
+            # logger.info(f"{idx:0>4} {word.text}")
+            # w_url = urljoin(URL, word['href'])
+            logger.info(f"{idx:0>4} {word}")
+            w_url = 'https://en.wiktionary.org/wiki/{}#Czech'.format(word)
+            w_resp = session.get(w_url)
+            w_soup = BeautifulSoup(w_resp.text, "lxml")
 
-        w_resp = session.get(w_url)
-        w_soup = BeautifulSoup(w_resp.text, "lxml")
+            fields = [str(idx), word]
+            cz_begin = w_soup.find('span', id="Czech")
+            data = dict(get_all_blocks(cz_begin))
+            if data:
+                for field in model_fields[2:]:
+                    fields.append(data.pop(field, ""))
 
-        fields = [str(idx), word.text]
-        cz_begin = w_soup.find('span', id="Czech")
-        data = dict(get_all_blocks(cz_begin))
-        if data:
-            for field in model_fields[2:]:
-                fields.append(data.pop(field, ""))
+                assert not data.keys(), data.keys()
 
-            assert not data.keys(), data.keys()
-
-            my_note = genanki.Note(
-                model=my_model,
-                fields=fields, sort_field='idx')
-            my_deck.add_note(my_note)
+                my_note = genanki.Note(
+                    model=my_model,
+                    fields=fields, sort_field='idx')
+                my_deck.add_note(my_note)
 
     genanki.Package(my_deck).write_to_file('./czfrq.apkg')
 

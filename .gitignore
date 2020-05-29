@@ -1,2 +1,5 @@
 .cache
 output
+data/target
+*.tok
+*.tok.gz
