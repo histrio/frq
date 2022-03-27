@@ -131,6 +131,7 @@ def main():
         'Numeral',
         'Particle',
 
+        'Participle',
         'Pronunciation',
         'Declension',
         'Etymology',
@@ -158,6 +159,7 @@ def main():
         'Alternative forms',
         'Coordinate terms',
         'External links',
+        'Usage Note',
     ]
 
     items = ['''
