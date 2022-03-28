@@ -1,5 +1,12 @@
-# czfrq
-Generate anki deck from Czech frequency word list
+# srbfrq
+Generate anki deck from Serbian frequency word list
 
 # Usage
-make build && make run-dev
+
+```bash
+$ poetry install
+```
+
+```bash
+$ poetry run srbfrq
+```

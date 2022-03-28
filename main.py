@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BLOCK_HEADERS = ['h3', 'h4']
-URL = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
+URL = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Serbian_wordlist'
 STYLE = '''
     .card {
         font-family: helvetica, arial, sans-serif;
@@ -84,7 +84,7 @@ def remove_edit_href(node):
 
 def get_all_blocks(node):
     if node is None:
-        logger.warning("No czech block")
+        logger.warning("No serbian block")
         return
     node = node.find_next(BLOCK_HEADERS)
     remove_edit_href(node)
@@ -108,8 +108,9 @@ def main():
 
     resp = session.get(URL)
     soup = BeautifulSoup(resp.text, "lxml")
-    base = soup.find('div', {'class': "mw-parser-output"})
-    w_list = base.find('ol').find_all('li')
+    #import pdb; pdb.set_trace()
+    base = soup.find('table')
+    w_list = base.find_all('tr')
 
     model_fields = [
         'idx',
@@ -130,14 +131,18 @@ def main():
         'Adjective',
         'Numeral',
         'Particle',
+        'Letter',
 
         'Participle',
         'Pronunciation',
+        'Pronunciation 1',
+        'Pronunciation 2',
         'Declension',
         'Etymology',
         'Etymology 1',
         'Etymology 2',
         'Etymology 3',
+        'Etymology 4',
         'Proper noun',
         'Synonyms',
         'Antonyms',
@@ -160,6 +165,8 @@ def main():
         'Coordinate terms',
         'External links',
         'Usage Note',
+        'Quotations',
+        'Determiner',
     ]
 
     items = ['''
@@ -195,18 +202,19 @@ def main():
             ''' % '\n'.join(items),
         }])
 
-    my_deck = genanki.Deck(2059400111, 'Czech Frequency Word List')
+    my_deck = genanki.Deck(2059500111, 'Serbian Frequency Word List')
 
+    s = 0
     for idx, w in enumerate(w_list):
-        word = w.find('a')
-        logger.info(f"{idx:0>4} {word.text}")
-        w_url = urljoin(URL, word['href'])
+        word = w.find('th').text.strip()
+        w_url = urljoin('https://en.wiktionary.org/wiki/', word)
+        logger.info(f"{idx:0>4} {w_url}")
 
         w_resp = session.get(w_url)
         w_soup = BeautifulSoup(w_resp.text, "lxml")
 
-        fields = [str(idx), word.text]
-        cz_begin = w_soup.find('span', id="Czech")
+        fields = [str(idx), word]
+        cz_begin = w_soup.find('span', id="Serbo-Croatian")
         data = dict(get_all_blocks(cz_begin))
         if data:
             for field in model_fields[2:]:
@@ -218,8 +226,11 @@ def main():
                 model=my_model,
                 fields=fields, sort_field='idx')
             my_deck.add_note(my_note)
+            s += 1
+        if s >=5000:
+            break
 
-    genanki.Package(my_deck).write_to_file('/output/czfrq.apkg')
+    genanki.Package(my_deck).write_to_file('/tmp/srbfrq.apkg')
 
 
 if __name__ == "__main__":

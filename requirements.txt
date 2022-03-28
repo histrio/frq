@@ -1,5 +1,0 @@
-requests==2.20.0
-beautifulsoup4==4.6.0
-lxml==4.2.3
-CacheControl==0.12.5
-lockfile==0.12.2
