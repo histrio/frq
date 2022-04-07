@@ -1,5 +1,5 @@
-# srbfrq
-Generate anki deck from Serbian frequency word list
+# frq
+Generate anki deck from frequency word lists
 
 # Usage
 
@@ -8,5 +8,5 @@ $ poetry install
 ```
 
 ```bash
-$ poetry run srbfrq
+$ poetry run frq
 ```
