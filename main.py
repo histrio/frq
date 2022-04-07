@@ -1,10 +1,11 @@
 import os
 import logging
-import genanki
-import requests
-from bs4 import BeautifulSoup, NavigableString
+import hashlib
 from urllib.parse import urljoin
 
+import requests
+import genanki
+from bs4 import BeautifulSoup, NavigableString
 from cachecontrol import CacheControl
 from cachecontrol.caches.file_cache import FileCache
 
@@ -197,8 +198,10 @@ def generate(args):
                 {{/%(field)s}}
     ''' % {'field': field} for field in FIELDS[2:]]
 
+    model_name = f'model-frq-{args.lang}'
+    model_id = int(hashlib.sha256(model_name.encode('utf-8')).hexdigest(), 16) % 10**8
     my_model = genanki.Model(
-        1607392320,
+        model_id,
         'Wikislovnik',
         css=STYLE,
         fields=[{"name": name} for name in FIELDS],
@@ -224,7 +227,9 @@ def generate(args):
 
 
     name, w_list = SOURCES[args.lang]
-    my_deck = genanki.Deck(2059500111, f'{name} Frequency Word List')
+    deck_name = f'deck-frq-{args.lang}'
+    deck_id = int(hashlib.sha256(deck_name.encode('utf-8')).hexdigest(), 16) % 10**8
+    my_deck = genanki.Deck(deck_id, f'{name} Frequency Word List')
     for idx, word in enumerate(w_list(session)):
         w_url = urljoin('https://en.wiktionary.org/wiki/', word)
         logger.info(f"{idx:0>4} {word}")
