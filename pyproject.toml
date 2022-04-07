@@ -1,8 +1,14 @@
 [tool.poetry]
 name = "czfrq"
 version = "0.1.0"
-description = "Generate anki deck from Czech frequency word list"
+description = "Generate anki deck from frequency word lists"
 authors = ["Rinat Sabitov <rinat.sabitov@gmail.com>"]
+packages = [
+    { include = "main.py" },
+]
+
+[tool.poetry.scripts]
+frq = 'main:main'
 
 [tool.poetry.dependencies]
 python = "^3.7|^3.8|^3.9|^3.10"

@@ -1,3 +1,4 @@
+import os
 import logging
 import genanki
 import requests
@@ -10,8 +11,66 @@ from cachecontrol.caches.file_cache import FileCache
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+SOURCES = {}
+CACHE = os.path.expanduser('~/.cache/wikifrq')
 BLOCK_HEADERS = ['h3', 'h4']
-URL = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
+
+FIELDS = [
+    'idx',
+    'Word',
+
+    'Pronoun',
+    'Preposition',
+    'Conjunction',
+    'Verb',
+    'Verb form',
+    'Noun',
+    'Noun 1',
+    'Noun 2',
+    'Adverb',
+    'Adverb 1',
+    'Adverb 2',
+    'Interjection',
+    'Adjective',
+    'Numeral',
+    'Particle',
+    'Letter',
+
+    'Participle',
+    'Pronunciation',
+    'Pronunciation 1',
+    'Pronunciation 2',
+    'Declension',
+    'Etymology',
+    'Etymology 1',
+    'Etymology 2',
+    'Etymology 3',
+    'Etymology 4',
+    'Proper noun',
+    'Synonyms',
+    'Antonyms',
+    'Hypernyms',
+    'Hyponyms',
+    'Meronyms',
+    'Anagrams',
+    'Contraction',
+    'References',
+    'Descendants',
+    'Related terms',
+    'See also',
+    'Further reading',
+    'Derived terms',
+    'Usage notes',
+    'Phrases',
+    'Phrase',
+    'Conjugation',
+    'Alternative forms',
+    'Coordinate terms',
+    'External links',
+    'Usage Note',
+    'Quotations',
+    'Determiner',
+]
 STYLE = '''
     .card {
         font-family: helvetica, arial, sans-serif;
@@ -82,10 +141,35 @@ def remove_edit_href(node):
         edit_span.decompose()
 
 
+def regsource(code, name):
+    def wrapper(clbl):
+        SOURCES[code] = (name, clbl)
+        def _wrapper(*args, **kwargs):
+            return clbl(*args, **kwargs)
+        return _wrapper
+    return wrapper
+
+
+@regsource('se', 'Serbo-Croatian')
+def iterate_srb_words(session):
+    url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Serbian_wordlist'
+    resp = session.get(url)
+    soup = BeautifulSoup(resp.text, "lxml")
+    base = soup.find('table')
+    for item in base.find_all('tr'):
+        yield item.find('th').text.strip()
+
+@regsource('cz', 'Czech')
+def iterate_cz_words(session):
+    url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
+    resp = session.get(url)
+    soup = BeautifulSoup(resp.text, "lxml")
+    base = soup.find('div', {'class': "mw-parser-output"})
+    for item in base.find('ol').find_all('li'):
+        yield item.find('a').text.strip()
+
+
 def get_all_blocks(node):
-    if node is None:
-        logger.warning("No czech block")
-        return
     node = node.find_next(BLOCK_HEADERS)
     remove_edit_href(node)
     head, body = node.text, ""
@@ -102,79 +186,22 @@ def get_all_blocks(node):
     yield head, body
 
 
-def main():
-    forever_cache = FileCache('/tmp/.cache/', forever=True)
+def generate(args):
+    forever_cache = FileCache(CACHE, forever=True)
     session = CacheControl(requests.Session(), forever_cache)
-
-    resp = session.get(URL)
-    soup = BeautifulSoup(resp.text, "lxml")
-    base = soup.find('div', {'class': "mw-parser-output"})
-    w_list = base.find('ol').find_all('li')
-
-    model_fields = [
-        'idx',
-        'Word',
-
-        'Pronoun',
-        'Preposition',
-        'Conjunction',
-        'Verb',
-        'Verb form',
-        'Noun',
-        'Noun 1',
-        'Noun 2',
-        'Adverb',
-        'Adverb 1',
-        'Adverb 2',
-        'Interjection',
-        'Adjective',
-        'Numeral',
-        'Particle',
-
-        'Participle',
-        'Pronunciation',
-        'Declension',
-        'Etymology',
-        'Etymology 1',
-        'Etymology 2',
-        'Etymology 3',
-        'Proper noun',
-        'Synonyms',
-        'Antonyms',
-        'Hypernyms',
-        'Hyponyms',
-        'Meronyms',
-        'Anagrams',
-        'Contraction',
-        'References',
-        'Descendants',
-        'Related terms',
-        'See also',
-        'Further reading',
-        'Derived terms',
-        'Usage notes',
-        'Phrases',
-        'Phrase',
-        'Conjugation',
-        'Alternative forms',
-        'Coordinate terms',
-        'External links',
-        'Usage Note',
-    ]
-
     items = ['''
                 {{#%(field)s}}
                 <div id="notes" class="items">
                 <h2> %(field)s </h2> {{%(field)s}}
                 </div>
                 {{/%(field)s}}
-    ''' % {'field': field} for field in model_fields[2:]]
+    ''' % {'field': field} for field in FIELDS[2:]]
 
     my_model = genanki.Model(
         1607392320,
         'Wikislovnik',
         css=STYLE,
-        fields=[{"name": name} for name in model_fields],
+        fields=[{"name": name} for name in FIELDS],
         templates=[{
             'name': 'Card 1',
             'qfmt': '''
@@ -195,32 +222,39 @@ def main():
             ''' % '\n'.join(items),
         }])
 
-    my_deck = genanki.Deck(2059400111, 'Czech Frequency Word List')
 
-    for idx, w in enumerate(w_list):
-        word = w.find('a')
-        logger.info(f"{idx:0>4} {word.text}")
-        w_url = urljoin(URL, word['href'])
+    name, w_list = SOURCES[args.lang]
+    my_deck = genanki.Deck(2059500111, f'{name} Frequency Word List')
+    for idx, word in enumerate(w_list(session)):
+        w_url = urljoin('https://en.wiktionary.org/wiki/', word)
+        logger.info(f"{idx:0>4} {word}")
 
         w_resp = session.get(w_url)
         w_soup = BeautifulSoup(w_resp.text, "lxml")
 
-        fields = [str(idx), word.text]
-        cz_begin = w_soup.find('span', id="Czech")
-        data = dict(get_all_blocks(cz_begin))
+        fields = [str(idx), word]
+        _begin = w_soup.find('span', id=name)
+        if _begin is None:
+            logger.warning(f"No block `{name}`")
+            continue
+        data = dict(get_all_blocks(_begin))
         if data:
-            for field in model_fields[2:]:
+            for field in FIELDS[2:]:
                 fields.append(data.pop(field, ""))
 
             assert not data.keys(), data.keys()
-
             my_note = genanki.Note(
                 model=my_model,
                 fields=fields, sort_field='idx')
             my_deck.add_note(my_note)
+    genanki.Package(my_deck).write_to_file(f'/frq-{args.lang}.apkg')
 
-    genanki.Package(my_deck).write_to_file('/output/czfrq.apkg')
 
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('lang', choices=SOURCES.keys())
+    generate(parser.parse_args())
 
 if __name__ == "__main__":
     main()

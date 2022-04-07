@@ -1,5 +1,12 @@
-# czfrq
-Generate anki deck from Czech frequency word list
+# frq
+Generate anki deck from frequency word lists
 
 # Usage
-make build && make run-dev
+
+```bash
+$ poetry install
+```
+
+```bash
+$ poetry run frq
+```
