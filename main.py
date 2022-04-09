@@ -3,17 +3,16 @@ import logging
 import hashlib
 from urllib.parse import urljoin
 
-import requests
 import genanki
 from bs4 import BeautifulSoup, NavigableString
-from cachecontrol import CacheControl
-from cachecontrol.caches.file_cache import FileCache
+from requests_cache import CachedSession
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 SOURCES = {}
-CACHE = os.path.expanduser('~/.cache/wikifrq')
+CACHE = os.path.expanduser('~/.cache/wikifrq/')
+
 BLOCK_HEADERS = ['h3', 'h4']
 
 FIELDS = [
@@ -36,6 +35,7 @@ FIELDS = [
     'Numeral',
     'Particle',
     'Letter',
+    'Postposition',
 
     'Participle',
     'Pronunciation',
@@ -47,6 +47,12 @@ FIELDS = [
     'Etymology 2',
     'Etymology 3',
     'Etymology 4',
+    'Etymology 5',
+    'Etymology 6',
+    'Etymology 7',
+    'Etymology 8',
+    'Etymology 9',
+    'Etymology 10',
     'Proper noun',
     'Synonyms',
     'Antonyms',
@@ -71,6 +77,21 @@ FIELDS = [
     'Usage Note',
     'Quotations',
     'Determiner',
+    'Translations',
+    'Number',
+    'Article',
+    'Symbol',
+    'Punctuation mark',
+    'Gallery',
+    'Holonyms',
+    'Prepositional phrase',
+    'Statistics',
+    'Troponyms',
+    'Infix',
+    'Notes',
+    'Abbreviations',
+    'Prefix',
+    'Proverbs',
 ]
 STYLE = '''
     .card {
@@ -155,19 +176,33 @@ def regsource(code, name):
 def iterate_srb_words(session):
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Serbian_wordlist'
     resp = session.get(url)
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.content, "lxml")
     base = soup.find('table')
     for item in base.find_all('tr'):
         yield item.find('th').text.strip()
+
+@regsource('en', 'English')
+def iterate_eng_words(session):
+    url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/TV/2006/'
+    for part in ['1-1000', '1001-2000']:
+        resp = session.get(url + part)
+        soup = BeautifulSoup(resp.text, "lxml")
+        base = soup.find('table')
+        for item in base.find_all('tr'):
+            #import pdb; pdb.set_trace()
+            href = item.find('a')
+            if href:
+                yield href.text.strip()
+           # yield item.find('th').text.strip()
 
 @regsource('cz', 'Czech')
 def iterate_cz_words(session):
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
     resp = session.get(url)
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.content, "lxml")
     base = soup.find('div', {'class': "mw-parser-output"})
     for item in base.find('ol').find_all('li'):
-        yield item.find('a').text.strip()
+        yield item.find('a').content.strip()
 
 
 def get_all_blocks(node):
@@ -188,8 +223,7 @@ def get_all_blocks(node):
 
 
 def generate(args):
-    forever_cache = FileCache(CACHE, forever=True)
-    session = CacheControl(requests.Session(), forever_cache)
+    session = CachedSession('http_cache', backend='filesystem', use_cache_dir=True)
     items = ['''
                 {{#%(field)s}}
                 <div id="notes" class="items">
@@ -234,8 +268,8 @@ def generate(args):
         w_url = urljoin('https://en.wiktionary.org/wiki/', word)
         logger.info(f"{idx:0>4} {word}")
 
-        w_resp = session.get(w_url)
-        w_soup = BeautifulSoup(w_resp.text, "lxml")
+        w_resp = session.get(w_url, stream=False)
+        w_soup = BeautifulSoup(w_resp.content, "lxml")
 
         fields = [str(idx), word]
         _begin = w_soup.find('span', id=name)
@@ -252,7 +286,9 @@ def generate(args):
                 model=my_model,
                 fields=fields, sort_field='idx')
             my_deck.add_note(my_note)
-    genanki.Package(my_deck).write_to_file(f'/frq-{args.lang}.apkg')
+
+    output_filename = os.path.join(os.getcwd(), f'frq-{args.lang}.apkg')
+    genanki.Package(my_deck).write_to_file(output_filename)
 
 
 def main():
