@@ -7,7 +7,7 @@ import genanki
 from bs4 import BeautifulSoup, NavigableString
 from requests_cache import CachedSession
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SOURCES = {}
@@ -92,6 +92,7 @@ FIELDS = [
     'Abbreviations',
     'Prefix',
     'Proverbs',
+    'Reference',
 ]
 STYLE = '''
     .card {
