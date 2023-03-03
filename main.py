@@ -36,7 +36,6 @@ FIELDS = [
     'Particle',
     'Letter',
     'Postposition',
-
     'Participle',
     'Pronunciation',
     'Pronunciation 1',
@@ -53,6 +52,9 @@ FIELDS = [
     'Etymology 8',
     'Etymology 9',
     'Etymology 10',
+    'Etymology 11',
+    'Etymology 12',
+    'Etymology 13',
     'Proper noun',
     'Synonyms',
     'Antonyms',
@@ -91,9 +93,13 @@ FIELDS = [
     'Notes',
     'Abbreviations',
     'Prefix',
+    'Suffix',
     'Proverbs',
     'Reference',
+    'Collocations',
+    'Multiple parts of speech',
 ]
+
 STYLE = '''
     .card {
         font-family: helvetica, arial, sans-serif;
@@ -158,6 +164,35 @@ STYLE = '''
 '''
 
 
+items = ['''
+            {{#%(field)s}}
+            <div id="notes" class="items">
+            <h2> %(field)s </h2> {{%(field)s}}
+            </div>
+            {{/%(field)s}}
+''' % {'field': field} for field in FIELDS[2:]]
+
+TEMPLATES = [{
+            'name': 'Card 1',
+            'qfmt': '''
+                <div class="bar head">Deck : {{Deck}}
+                </div>
+                <div class="section">
+                <div class="expression">{{Word}}</div>
+                </div>
+            ''',
+            'afmt': '''
+                {{FrontSide}}
+                <div class="section">
+                    %s
+                </div>
+                <div class="bar foot">
+                  <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
+                </div>
+            ''' % '\n'.join(items),
+        }]
+
+
 def remove_edit_href(node):
     edit_span = node.find('span', {'class': 'mw-editsection'})
     if edit_span:
@@ -167,8 +202,10 @@ def remove_edit_href(node):
 def regsource(code, name):
     def wrapper(clbl):
         SOURCES[code] = (name, clbl)
+
         def _wrapper(*args, **kwargs):
             return clbl(*args, **kwargs)
+
         return _wrapper
     return wrapper
 
@@ -182,19 +219,19 @@ def iterate_srb_words(session):
     for item in base.find_all('tr'):
         yield item.find('th').text.strip()
 
+
 @regsource('en', 'English')
 def iterate_eng_words(session):
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/TV/2006/'
-    for part in ['1-1000', '1001-2000']:
+    for part in ['1-1000', '1001-2000', '2001-3000', '3001-4000', '4001-5000']:
         resp = session.get(url + part)
         soup = BeautifulSoup(resp.text, "lxml")
         base = soup.find('table')
         for item in base.find_all('tr'):
-            #import pdb; pdb.set_trace()
             href = item.find('a')
             if href:
                 yield href.text.strip()
-           # yield item.find('th').text.strip()
+
 
 @regsource('cz', 'Czech')
 def iterate_cz_words(session):
@@ -225,13 +262,6 @@ def get_all_blocks(node):
 
 def generate(args):
     session = CachedSession('http_cache', backend='filesystem', use_cache_dir=True)
-    items = ['''
-                {{#%(field)s}}
-                <div id="notes" class="items">
-                <h2> %(field)s </h2> {{%(field)s}}
-                </div>
-                {{/%(field)s}}
-    ''' % {'field': field} for field in FIELDS[2:]]
 
     model_name = f'model-frq-{args.lang}'
     model_id = int(hashlib.sha256(model_name.encode('utf-8')).hexdigest(), 16) % 10**8
@@ -240,26 +270,7 @@ def generate(args):
         'Wikislovnik',
         css=STYLE,
         fields=[{"name": name} for name in FIELDS],
-        templates=[{
-            'name': 'Card 1',
-            'qfmt': '''
-                <div class="bar head">Deck : {{Deck}}
-                </div>
-                <div class="section">
-                <div class="expression">{{Word}}</div>
-                </div>
-            ''',
-            'afmt': '''
-                {{FrontSide}}
-                <div class="section">
-                    %s
-                </div>
-                <div class="bar foot">
-                  <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
-                </div>
-            ''' % '\n'.join(items),
-        }])
-
+        templates=TEMPLATES)
 
     name, w_list = SOURCES[args.lang]
     deck_name = f'deck-frq-{args.lang}'
@@ -297,6 +308,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('lang', choices=SOURCES.keys())
     generate(parser.parse_args())
+
 
 if __name__ == "__main__":
     main()
