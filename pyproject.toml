@@ -19,6 +19,7 @@ genanki = { git = "https://github.com/kerrickstaley/genanki.git", branch = "mast
 msgpack = "0.6.2"
 requests = "^2.27"
 requests-cache = "^0.9.3"
+nltk = "^3.8.1"
 
 [tool.poetry.dev-dependencies]
 

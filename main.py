@@ -98,6 +98,7 @@ FIELDS = [
     'Reference',
     'Collocations',
     'Multiple parts of speech',
+    'Trivia',
 ]
 
 STYLE = '''
@@ -201,10 +202,15 @@ def remove_edit_href(node):
 
 def regsource(code, name):
     def wrapper(clbl):
+
         SOURCES[code] = (name, clbl)
+        cache = set()
 
         def _wrapper(*args, **kwargs):
-            return clbl(*args, **kwargs)
+            for word in clbl(*args, **kwargs):
+                if word not in cache and word[0].upper() != word[0]:
+                    cache.add(word)
+                    yield word
 
         return _wrapper
     return wrapper
@@ -222,15 +228,18 @@ def iterate_srb_words(session):
 
 @regsource('en', 'English')
 def iterate_eng_words(session):
+    from nltk.stem import WordNetLemmatizer
+    lemmatizer = WordNetLemmatizer()
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/TV/2006/'
-    for part in ['1-1000', '1001-2000', '2001-3000', '3001-4000', '4001-5000']:
+    for part in ['1-1000', '1001-2000', '2001-3000', '3001-4000', '4001-5000', '5001-6000']:
         resp = session.get(url + part)
         soup = BeautifulSoup(resp.text, "lxml")
         base = soup.find('table')
         for item in base.find_all('tr'):
             href = item.find('a')
             if href:
-                yield href.text.strip()
+                word = href.text.strip()
+                yield lemmatizer.lemmatize(word)
 
 
 @regsource('cz', 'Czech')
@@ -278,8 +287,8 @@ def generate(args):
     my_deck = genanki.Deck(deck_id, f'{name} Frequency Word List')
     for idx, word in enumerate(w_list(session)):
         w_url = urljoin('https://en.wiktionary.org/wiki/', word)
-        logger.info(f"{idx:0>4} {word}")
 
+        logger.info(f"{idx:0>5} {word}")
         w_resp = session.get(w_url, stream=False)
         w_soup = BeautifulSoup(w_resp.content, "lxml")
 
