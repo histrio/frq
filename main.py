@@ -18,7 +18,6 @@ BLOCK_HEADERS = ['h3', 'h4']
 FIELDS = [
     'idx',
     'Word',
-
     'Pronoun',
     'Preposition',
     'Conjunction',
@@ -165,24 +164,29 @@ STYLE = '''
 '''
 
 
-items = ['''
+items = [
+    '''
             {{#%(field)s}}
             <div id="notes" class="items">
             <h2> %(field)s </h2> {{%(field)s}}
             </div>
             {{/%(field)s}}
-''' % {'field': field} for field in FIELDS[2:]]
+'''
+    % {'field': field}
+    for field in FIELDS[2:]
+]
 
-TEMPLATES = [{
-            'name': 'Card 1',
-            'qfmt': '''
+TEMPLATES = [
+    {
+        'name': 'Card 1',
+        'qfmt': '''
                 <div class="bar head">Deck : {{Deck}}
                 </div>
                 <div class="section">
                 <div class="expression">{{Word}}</div>
                 </div>
             ''',
-            'afmt': '''
+        'afmt': '''
                 {{FrontSide}}
                 <div class="section">
                     %s
@@ -190,8 +194,10 @@ TEMPLATES = [{
                 <div class="bar foot">
                   <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
                 </div>
-            ''' % '\n'.join(items),
-        }]
+            '''
+        % '\n'.join(items),
+    }
+]
 
 
 def remove_edit_href(node):
@@ -213,6 +219,7 @@ def regsource(code, name):
                     yield word
 
         return _wrapper
+
     return wrapper
 
 
@@ -229,6 +236,7 @@ def iterate_srb_words(session):
 @regsource('en', 'English')
 def iterate_eng_words(session):
     from nltk.stem import WordNetLemmatizer
+
     lemmatizer = WordNetLemmatizer()
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/TV/2006/'
     for part in ['1-1000', '1001-2000', '2001-3000', '3001-4000', '4001-5000', '5001-6000']:
@@ -275,11 +283,8 @@ def generate(args):
     model_name = f'model-frq-{args.lang}'
     model_id = int(hashlib.sha256(model_name.encode('utf-8')).hexdigest(), 16) % 10**8
     my_model = genanki.Model(
-        model_id,
-        'Wikislovnik',
-        css=STYLE,
-        fields=[{"name": name} for name in FIELDS],
-        templates=TEMPLATES)
+        model_id, 'Wikislovnik', css=STYLE, fields=[{"name": name} for name in FIELDS], templates=TEMPLATES
+    )
 
     name, w_list = SOURCES[args.lang]
     deck_name = f'deck-frq-{args.lang}'
@@ -303,9 +308,7 @@ def generate(args):
                 fields.append(data.pop(field, ""))
 
             assert not data.keys(), data.keys()
-            my_note = genanki.Note(
-                model=my_model,
-                fields=fields, sort_field='idx')
+            my_note = genanki.Note(model=my_model, fields=fields, sort_field='idx')
             my_deck.add_note(my_note)
 
     output_filename = os.path.join(os.getcwd(), f'frq-{args.lang}.apkg')
@@ -314,6 +317,7 @@ def generate(args):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('lang', choices=SOURCES.keys())
     generate(parser.parse_args())
