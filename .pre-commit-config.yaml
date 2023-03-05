@@ -15,6 +15,12 @@ repos:
         - --line-length=120
         - --skip-string-normalization
 
+- repo: https://github.com/pycqa/isort
+  rev: 5.12.0
+  hooks:
+    - id: isort
+      name: isort (python)
+
 - repo: https://github.com/pycqa/flake8
   rev: 5.0.0
   hooks:
@@ -22,3 +28,8 @@ repos:
     language_version: python3
     args:
       - "--max-line-length=120"
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: ''  # Use the sha / tag you want to point at
+  hooks:
+  - id: mypy
