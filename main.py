@@ -15,7 +15,34 @@ CACHE = os.path.expanduser('~/.cache/wikifrq/')
 
 BLOCK_HEADERS = ['h3', 'h4']
 
-FIELDS = [
+FIELDS_RU = [
+    'idx',
+    'Word',
+    'Арабица (عربچه)', 
+    'Латиница (Latinça)',
+    'Морфологические и синтаксические свойства', 
+    'Произношение', 
+    'Семантические свойства', 
+    'Значение', 
+    'Синонимы', 
+    'Антонимы', 
+    'Гиперонимы', 
+    'Гипонимы', 
+    'Родственные слова', 
+    'Этимология', 
+    'Фразеологизмы и устойчивые сочетания',
+    'Библиография',
+    'Пословицы и поговорки',
+    'Латиница (Latınca)',
+    'Латиница (Latinca)',
+    'Персональные инструменты',
+    'Тип и синтаксические свойства сочетания',
+    'Альтернативное написание',
+    'Перевод',
+]
+
+
+FIELDS_EN = [
     'idx',
     'Word',
     'Pronoun',
@@ -164,40 +191,36 @@ STYLE = '''
 '''
 
 
-items = [
-    '''
-            {{#%(field)s}}
-            <div id="notes" class="items">
-            <h2> %(field)s </h2> {{%(field)s}}
-            </div>
-            {{/%(field)s}}
-'''
-    % {'field': field}
-    for field in FIELDS[2:]
-]
 
-TEMPLATES = [
-    {
-        'name': 'Card 1',
-        'qfmt': '''
-                <div class="bar head">Deck : {{Deck}}
+
+ITEM = '''
+                {{#%(field)s}}
+                <div id="notes" class="items">
+                <h2> %(field)s </h2> {{%(field)s}}
                 </div>
-                <div class="section">
-                <div class="expression">{{Word}}</div>
-                </div>
-            ''',
-        'afmt': '''
-                {{FrontSide}}
-                <div class="section">
-                    %s
-                </div>
-                <div class="bar foot">
-                  <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
-                </div>
-            '''
-        % '\n'.join(items),
-    }
-]
+                {{/%(field)s}}
+    '''
+AFMT = '''
+                    {{FrontSide}}
+                    <div class="section">
+                        %s
+                    </div>
+                    <div class="bar foot">
+                      <div id="url"><a href=https://en.wiktionary.org/wiki/{{ Word }}#Czech>Wikislovnik</a></div>
+                    </div>
+                '''
+
+QFMT = '''
+                    <div class="bar head">Deck : {{Deck}}
+                    </div>
+                    <div class="section">
+                    <div class="expression">{{Word}}</div>
+                    </div>
+                '''
+
+
+class FrqError(Exception):
+    pass
 
 
 def remove_edit_href(node):
@@ -206,10 +229,10 @@ def remove_edit_href(node):
         edit_span.decompose()
 
 
-def regsource(code, name):
+def regsource(code, name, url='https://en.wiktionary.org/wiki/', fields=FIELDS_EN):
     def wrapper(clbl):
 
-        SOURCES[code] = (name, clbl)
+        SOURCES[code] = (name, clbl, url, fields)
         cache = set()
 
         def _wrapper(*args, **kwargs):
@@ -223,7 +246,7 @@ def regsource(code, name):
     return wrapper
 
 
-@regsource('se', 'Serbo-Croatian')
+@regsource('se-en', 'Serbo-Croatian')
 def iterate_srb_words(session):
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Serbian_wordlist'
     resp = session.get(url)
@@ -233,7 +256,7 @@ def iterate_srb_words(session):
         yield item.find('th').text.strip()
 
 
-@regsource('en', 'English')
+@regsource('en-en', 'English')
 def iterate_eng_words(session):
     from nltk.stem import WordNetLemmatizer
 
@@ -250,7 +273,7 @@ def iterate_eng_words(session):
                 yield lemmatizer.lemmatize(word)
 
 
-@regsource('cz', 'Czech')
+@regsource('cz-en', 'Czech')
 def iterate_cz_words(session):
     url = 'https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists/Czech_wordlist'
     resp = session.get(url)
@@ -258,6 +281,18 @@ def iterate_cz_words(session):
     base = soup.find('div', {'class': "mw-parser-output"})
     for item in base.find('ol').find_all('li'):
         yield item.find('a').content.strip()
+
+
+@regsource('tt-ru', 'Татарский', 'https://ru.wiktionary.org/wiki/', FIELDS_RU)
+def iterate_tt_ru_words(session):
+    url = 'https://ru.wiktionary.org/wiki/%D0%9F%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5:%D0%A0%D0%B5%D0%B9%D1%82%D0%B8%D0%BD%D0%B3_%D1%87%D0%B0%D1%81%D1%82%D0%BE%D1%82%D0%BD%D0%BE%D1%81%D1%82%D0%B8_%D1%81%D0%BB%D0%BE%D0%B2_%D1%82%D0%B0%D1%82%D0%B0%D1%80%D1%81%D0%BA%D0%BE%D0%B3%D0%BE_%D1%8F%D0%B7%D1%8B%D0%BA%D0%B0,_1-5000'
+    resp = session.get(url)
+    soup = BeautifulSoup(resp.content, "lxml")
+    base = soup.find('div', {'class': "mw-parser-output"})
+    for item in base.find('ol').find_all('li'):
+        href = item.find('a')
+        if href is not None:
+            yield href.text.strip()
 
 
 def get_all_blocks(node):
@@ -269,12 +304,12 @@ def get_all_blocks(node):
         if isinstance(node, NavigableString):
             continue
         if node.name in BLOCK_HEADERS:
-            yield head, body
+            yield head.strip(), body
             remove_edit_href(node)
             head, body = node.text, ""
         else:
             body += str(node)
-    yield head, body
+    yield head.strip(), body
 
 
 def generate(args):
@@ -282,33 +317,44 @@ def generate(args):
 
     model_name = f'model-frq-{args.lang}'
     model_id = int(hashlib.sha256(model_name.encode('utf-8')).hexdigest(), 16) % 10**8
+
+    name, w_list, w_url, fields = SOURCES[args.lang]
+
+    items = [ ITEM % {'field': field} for field in fields[2:] ]
+    templates = [
+        {
+            'name': 'Card 1',
+            'qfmt': QFMT,
+            'afmt': AFMT % '\n'.join(items),
+        }
+    ]
+
     my_model = genanki.Model(
-        model_id, 'Wikislovnik', css=STYLE, fields=[{"name": name} for name in FIELDS], templates=TEMPLATES
+        model_id, 'Wikislovnik', css=STYLE, fields=[{"name": name} for name in fields], templates=templates
     )
 
-    name, w_list = SOURCES[args.lang]
     deck_name = f'deck-frq-{args.lang}'
     deck_id = int(hashlib.sha256(deck_name.encode('utf-8')).hexdigest(), 16) % 10**8
     my_deck = genanki.Deck(deck_id, f'{name} Frequency Word List')
     for idx, word in enumerate(w_list(session)):
-        w_url = urljoin('https://en.wiktionary.org/wiki/', word)
+        w_url = urljoin(w_url, word)
 
         logger.info(f"{idx:0>5} {word}")
         w_resp = session.get(w_url, stream=False)
         w_soup = BeautifulSoup(w_resp.content, "lxml")
 
-        fields = [str(idx), word]
+        result_fields = [str(idx), word]
         _begin = w_soup.find('span', id=name)
         if _begin is None:
-            logger.warning(f"No block `{name}`")
+            logger.warning(f"No block `{name}` in {w_url}")
             continue
         data = dict(get_all_blocks(_begin))
         if data:
-            for field in FIELDS[2:]:
-                fields.append(data.pop(field, ""))
+            for field in fields[2:]:
+                result_fields.append(data.pop(field, ""))
 
             assert not data.keys(), data.keys()
-            my_note = genanki.Note(model=my_model, fields=fields, sort_field='idx')
+            my_note = genanki.Note(model=my_model, fields=result_fields, sort_field='idx')
             my_deck.add_note(my_note)
 
     output_filename = os.path.join(os.getcwd(), f'frq-{args.lang}.apkg')
@@ -320,8 +366,15 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('lang', choices=SOURCES.keys())
-    generate(parser.parse_args())
+    try:
+        generate(parser.parse_args())
+    except FrqError as err:
+        print(repr(err))
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    sys.exit(main())
+    
